@@ -83,8 +83,7 @@ namespace tincan
         if (!(channel_ev->events & EPOLLOUT))
         {
             channel_ev->events |= EPOLLOUT;
-            epoll_ctl(epfd_, EPOLL_CTL_MOD,
-                      channel_ev->data.fd, channel_ev.get());
+            epoll_ctl(epfd_, EPOLL_CTL_MOD, fd_, channel_ev.get());
         }
     }
 
@@ -98,7 +97,7 @@ namespace tincan
             {
                 
                 channel_ev->events &= ~EPOLLOUT;
-                epoll_ctl(epfd_, EPOLL_CTL_MOD, channel_ev->data.fd, channel_ev.get());
+                epoll_ctl(epfd_, EPOLL_CTL_MOD, fd_, channel_ev.get());
                 return;
             }
             wbuf_ = make_unique<string>(sendq_.front());
@@ -159,11 +158,11 @@ namespace tincan
     void
     ControllerCommsChannel::Close()
     {
-        if (channel_ev && channel_ev->data.fd != -1)
+        if (fd_ != -1)
         {
-            shutdown(channel_ev->data.fd, SHUT_RDWR);
-            close(channel_ev->data.fd);
-            channel_ev->data.fd = fd_ = -1;
+            shutdown(fd_, SHUT_RDWR);
+            close(fd_);
+            fd_ = -1;
         }
     }
 } // namespace tincan

@@ -79,10 +79,8 @@ namespace tincan
         size_t num_poll_events_ = 1;
         int epoll_fd_;
         atomic_bool exit_flag_;
-        unordered_map<int, shared_ptr<EpollChannel>> comm_channels_;
+        unordered_map<int, EpollChannel*> comm_channels_;
         bool HandleSignal_();
-        void HandleRead_(int fd);
-        void HandleWrite_(int fd);
         void SetupSignalHandler_();
 
     public:

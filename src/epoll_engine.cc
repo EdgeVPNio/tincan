@@ -47,14 +47,14 @@ namespace tincan
         auto ev = make_unique<epoll_event>();
         memset(ev.get(), 0, sizeof(epoll_event));
         ev->events = events;
-        ev->data.fd = ch->FileDesc();
+        ev->data.ptr = ch.get();
         int rc = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, ch->FileDesc(), ev.get());
         if (rc == -1)
         {
             throw TCEXCEPT("Error: epoll ctl add failed");
         }
         ch->SetChannelEvent(move(ev), epoll_fd_);
-        comm_channels_[ch->FileDesc()] = ch;
+        comm_channels_[ch->FileDesc()] = ch.get();
         num_poll_events_ = comm_channels_.size();
     }
 
@@ -73,17 +73,6 @@ namespace tincan
         num_poll_events_ = comm_channels_.size();
     }
 
-    void EpollEngine::HandleWrite_(int fd)
-    {
-        auto ch = comm_channels_.at(fd);
-        ch->WriteNext();
-    }
-    void EpollEngine::HandleRead_(int fd)
-    {
-        auto ch = comm_channels_.at(fd);
-        ch->ReadNext();
-    }
-
     void EpollEngine::Epoll()
     {
         struct epoll_event ev[num_poll_events_];
@@ -97,22 +86,21 @@ namespace tincan
         {
             if (ev[num_fd].events & EPOLLIN)
             {
-                HandleRead_(ev[num_fd].data.fd);
+                ((EpollChannel*)(ev[num_fd].data.ptr))->ReadNext();
             }
             else if (ev[num_fd].events & EPOLLOUT)
             {
-                HandleWrite_(ev[num_fd].data.fd);
+                ((EpollChannel*)(ev[num_fd].data.ptr))->WriteNext();
             }
             else if (ev[num_fd].events & EPOLLRDHUP)
             {
-                auto ch = comm_channels_.at(ev[num_fd].data.fd);
-                DisableEpollIn(ch->ChannelEvent());
+                DisableEpollIn(ev[num_fd]);
             }
             else if (ev[num_fd].events & EPOLLHUP)
             {
-                auto ch = comm_channels_.at(ev[num_fd].data.fd);
+                auto ch = (EpollChannel*)(ev[num_fd].data.ptr);
                 ch->Close();
-                Deregister(ev[num_fd].data.fd);
+                Deregister(ch->FileDesc());
             }
         }
     }
@@ -136,7 +124,7 @@ namespace tincan
         if (!(channel_ev.events & EPOLLOUT))
         {
             channel_ev.events |= EPOLLOUT;
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel_ev.data.fd, &channel_ev);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ((EpollChannel*)(channel_ev.data.ptr))->FileDesc(), &channel_ev);
         }
     }
 
@@ -145,7 +133,7 @@ namespace tincan
         if (channel_ev.events & EPOLLOUT)
         {
             channel_ev.events &= ~EPOLLOUT;
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel_ev.data.fd, &channel_ev);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ((EpollChannel*)(channel_ev.data.ptr))->FileDesc(), &channel_ev);
         }
     }
 
@@ -154,7 +142,7 @@ namespace tincan
         if (!(channel_ev.events & EPOLLIN))
         {
             channel_ev.events |= EPOLLIN;
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel_ev.data.fd, &channel_ev);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ((EpollChannel*)(channel_ev.data.ptr))->FileDesc(), &channel_ev);
         }
     }
 
@@ -163,7 +151,7 @@ namespace tincan
         if (channel_ev.events & EPOLLIN)
         {
             channel_ev.events &= ~EPOLLIN;
-            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, channel_ev.data.fd, &channel_ev);
+            epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, ((EpollChannel*)(channel_ev.data.ptr))->FileDesc(), &channel_ev);
         }
     }
 

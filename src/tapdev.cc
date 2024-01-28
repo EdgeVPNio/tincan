@@ -173,7 +173,7 @@ namespace tincan
         {
             channel_ev->events |= EPOLLOUT;
             epoll_ctl(epfd_, EPOLL_CTL_MOD,
-                      channel_ev->data.fd, channel_ev.get());
+                      fd_, channel_ev.get());
         }
     }
 
@@ -202,7 +202,7 @@ namespace tincan
             }
         }
         channel_ev->events &= ~EPOLLOUT;
-        epoll_ctl(epfd_, EPOLL_CTL_MOD, channel_ev->data.fd, channel_ev.get());
+        epoll_ctl(epfd_, EPOLL_CTL_MOD, fd_, channel_ev.get());
     }
 
     void TapDev::ReadNext()
@@ -232,7 +232,7 @@ namespace tincan
         }
         if (channel_ev)
         {
-            channel_ev->data.fd = -1;
+            channel_ev->data.ptr = nullptr;
         }
     }
 } // tincan

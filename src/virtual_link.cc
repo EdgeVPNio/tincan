@@ -182,7 +182,7 @@ namespace tincan
     VirtualLink::RegisterLinkEventHandlers()
     {
         dtls_transport_->SignalReadPacket.connect(this, &VirtualLink::OnReadPacket);
-        dtls_transport_->SignalSentPacket.connect(this, &VirtualLink::OnSentPacket);
+        //dtls_transport_->SignalSentPacket.connect(this, &VirtualLink::OnSentPacket);
         dtls_transport_->SignalWritableState.connect(this, &VirtualLink::OnWriteableState);
 
         transport_ctlr_->SignalIceCandidatesGathered.connect(
